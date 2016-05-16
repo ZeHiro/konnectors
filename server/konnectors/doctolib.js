@@ -234,6 +234,5 @@ function buildNotifContent(requiredFields, entries, data, next) {
       entries.notifContent += ` ${localization.t(localizationKey, options)}`;
     }
   }
-      console.log(entries);
   next();
 }
