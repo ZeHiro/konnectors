@@ -1,6 +1,7 @@
 cozydb = require 'cozydb'
 async = require 'async'
 konnectorHash = require '../lib/konnector_hash'
+localization = require '../lib/localization_manager'
 
 log = require('printit')
     prefix: null
@@ -22,7 +23,7 @@ module.exports = Konnector = cozydb.getModel 'Konnector',
     importInterval: type: String, default: 'none'
     errorMessage: type: String, default: null
     importErrorMessage: type: String, default: null
-
+    _passwordStillEncrypted: Boolean
 
 # Retrieve all konnectors. Make sure that encrypted fields are decrypted before
 # being sent.
@@ -30,7 +31,11 @@ Konnector.all = (callback) ->
     Konnector.request 'all', (err, konnectors) ->
         konnectors ?= []
         for konnector in konnectors
-            konnector.injectEncryptedFields()
+            if konnector.shallRaisEncryptsFieldError()
+                konnector.importErrorMessage = 'encrypted fields'
+            else
+                konnector.injectEncryptedFields()
+
         callback err, konnectors
 
 
@@ -51,7 +56,7 @@ Konnector::getFields = ->
 
 
 # Unencrypt password fields and set them as normal fields.
-Konnector::injectEncryptedFields = ->
+Konnector::injectEncryptedFields = (callback) ->
     try
         parsedPasswords = JSON.parse @password
         @cleanFieldValues()
@@ -148,7 +153,13 @@ Konnector::runImport = (values, callback) ->
     else
         konnectorModule = konnectorHash[@slug]
 
+        # Only raise the error if there is an account for this konnector
+        if @shallRaisEncryptsFieldError()
+            return callback 'encrypted fields',\
+            localization.t 'encrypted fields'
+
         @injectEncryptedFields()
+
         values.lastSuccess = @lastSuccess
         konnectorModule.fetch values, (importErr, notifContent) =>
             fields = @getFields()
@@ -234,3 +245,10 @@ Konnector::cleanFieldValues = ->
         password = JSON.parse @password
         @password = JSON.stringify [password]
 
+# Tells if the konnector still has encrypted valued
+Konnector::hasEncryptedPassword = ->
+    @_passwordStillEncrypted? and @_passwordStillEncrypted
+
+Konnector::shallRaisEncryptsFieldError = ->
+    return @hasEncryptedPassword() and \
+    JSON.stringify(@accounts) isnt '[]'

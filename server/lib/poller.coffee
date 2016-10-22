@@ -156,7 +156,10 @@ class KonnectorPoller
             delete @timeouts[konnector.slug]
 
         if konnector.importInterval isnt 'none'
-            konnector.injectEncryptedFields()
+            if konnector.shallRaisEncryptsFieldError()
+                konnector.importErrorMessage = 'encrypted fields'
+            else
+                konnector.injectEncryptedFields()
 
             if startDate?
 
