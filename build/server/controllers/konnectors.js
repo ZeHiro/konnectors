@@ -20,10 +20,14 @@ module.exports = {
       } else if (konnector == null) {
         return res.sendStatus(404);
       } else {
-        konnector.injectEncryptedFields();
-        konnectorModule = require("../konnectors/" + konnector.slug);
-        if (konnectorModule.customView != null) {
-          konnector.customView = konnectorModule.customView;
+        if (konnector.shallRaisEncryptsFieldError()) {
+          konnector.importErrorMessage = 'encrypted fields';
+        } else {
+          konnector.injectEncryptedFields();
+          konnectorModule = require("../konnectors/" + konnector.slug);
+          if (konnectorModule.customView != null) {
+            konnector.customView = konnectorModule.customView;
+          }
         }
         req.konnector = konnector;
         return next();
