@@ -140,9 +140,39 @@ describe 'Konnector model', ->
         konnector.accounts.push
             login: 'login3'
 
-        konnector.import ->
+        konnector.import (err) ->
             importDone.should.equal 6
             should.exist konnector.lastImport
             konnector.isImporting.should.equal false
             done()
 
+    describe 'if the password is declared encrypted by the data-system,', ->
+
+        describe 'and there is no account', ->
+            it 'runImport should result with no error', (done) ->
+                konnector5 =
+                    name: 'Test'
+                    slug: 'test'
+                    importInterval: 'week'
+
+                Konnector.create konnector5, (err, konnector3) ->
+                    should.not.exist err
+                    konnector3._passwordStillEncrypted = true
+                    konnector3.runImport {}, (error) ->
+                        should.not.exist error
+                        done()
+
+        describe 'and there is an account,', ->
+            it 'runImport should result with an error', (done) ->
+                konnector6 =
+                    name: 'Test'
+                    slug: 'test'
+                    accounts: [{login: 'test'}]
+                    importInterval: 'week'
+
+                Konnector.create konnector6, (err, konnector7) ->
+                    should.not.exist err
+                    konnector7._passwordStillEncrypted = true
+                    konnector7.runImport {}, (e) ->
+                        e.should.equal 'encrypted fields'
+                        done()
